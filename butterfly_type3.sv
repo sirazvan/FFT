@@ -57,4 +57,3 @@ module butterfly_type3 #(
         end
     endgenerate
 endmodule
-
