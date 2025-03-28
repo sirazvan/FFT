@@ -17,7 +17,8 @@ module butterfly_type4 #(
     output logic signed [DATA_WIDTH-1:0] imag_out1
 );
 
-    logic signed [DATA_WIDTH-1:0] sum, diff;
+    logic signed [DATA_WIDTH-1:0] sum;
+    logic signed [DATA_WIDTH-1:0] diff;
     logic signed [2*DATA_WIDTH-1:0] mult_real;
     logic signed [2*DATA_WIDTH-1:0] mult_imag;
     logic signed [DATA_WIDTH-1:0] twiddle_mult_real;
@@ -28,7 +29,7 @@ module butterfly_type4 #(
     end
 
     always_ff @(posedge clk) begin
-	mult_imag <= (real_in1 * TWIDDLE_IMAG) + (imag_in1 * TWIDDLE_REAL);
+	    mult_imag <= (real_in1 * TWIDDLE_IMAG) + (imag_in1 * TWIDDLE_REAL);
     end
 
     always_ff @(posedge clk) begin
@@ -38,7 +39,7 @@ module butterfly_type4 #(
 
     assign real_out0 = real_in0 - twiddle_mult_real;
     assign imag_out0 = imag_in0 - twiddle_mult_imag;
-    assign real_out1 = real_in1 + twiddle_mult_real;
-    assign imag_out1 = imag_in1 + twiddle_mult_imag;
+    assign real_out1 = real_in0 + twiddle_mult_real;
+    assign imag_out1 = imag_in0 + twiddle_mult_imag;
 
 endmodule
