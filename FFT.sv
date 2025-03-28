@@ -179,9 +179,7 @@ module FFT16 #(
    endgenerate
 
 
-//////////////////////////////////////////////////////////
-
-  // === Stage 1 to 0 ===
+////////////////////////////////////////////////////////// === Stage 1 to 0 ===
 
   // Index 0 → Butterfly Type 1
   butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH)) bfly_stage1_0 (
@@ -203,10 +201,10 @@ module FFT16 #(
     .clk(clk),
     .enable(enable),
     .rst_n(rst_n),
-    .real_in0(stage1_r[1]), 
-    .imag_in0(stage1_i[1]),
-    .real_in1(stage1_r[2]), 
-    .imag_in1(stage1_i[2]),
+    .real_in0(stage1_r[2]), 
+    .imag_in0(stage1_i[2]),
+    .real_in1(stage1_r[3]), 
+    .imag_in1(stage1_i[3]),
     .real_out0(stage0_r[2]), 
     .imag_out0(stage0_i[2]),
     .real_out1(stage0_r[3]), 
@@ -221,10 +219,10 @@ module FFT16 #(
     .clk(clk),
     .en(enable),
     .rst_n(rst_n),
-    .real_in0(stage1_r[2]), 
-    .imag_in0(stage1_i[2]),
-    .real_in1(stage1_r[3]), 
-    .imag_in1(stage1_i[3]),
+    .real_in0(stage1_r[4]), 
+    .imag_in0(stage1_i[4]),
+    .real_in1(stage1_r[5]), 
+    .imag_in1(stage1_i[5]),
     .real_out0(stage0_r[4]), 
     .imag_out0(stage0_i[4]),
     .real_out1(stage0_r[5]), 
@@ -239,10 +237,10 @@ module FFT16 #(
     .clk(clk),
     .en(enable),
     .rst_n(rst_n),
-    .real_in0(stage1_r[4]), 
-    .imag_in0(stage1_i[4]),
-    .real_in1(stage1_r[5]), 
-    .imag_in1(stage1_i[5]),
+    .real_in0(stage1_r[6]), 
+    .imag_in0(stage1_i[6]),
+    .real_in1(stage1_r[7]), 
+    .imag_in1(stage1_i[7]),
     .real_out0(stage0_r[6]), 
     .imag_out0(stage0_i[6]),
     .real_out1(stage0_r[7]), 
