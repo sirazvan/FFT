@@ -2,7 +2,7 @@ module butterfly_type2 #(
     parameter DATA_WIDTH = 16
 )(
     input  logic clk,
-    input  logic en,
+    input  logic enable,
     input  logic rst_n, 
 
     input  logic signed [DATA_WIDTH-1:0] real_in0,
