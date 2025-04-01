@@ -1,5 +1,5 @@
 
-module FFT16_tb;
+module tb_FFT;
 
   parameter DATA_WIDTH = 16;
   parameter N = 16;
