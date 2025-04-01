@@ -3,7 +3,7 @@ module butterfly_type3 #(
     parameter INVERT_MODE = 0  
 )(
     input  logic clk,
-    input  logic en,
+    input  logic enable,
     input  logic rst_n, 
 
     input  logic signed [DATA_WIDTH-1:0] real_in0, 
@@ -14,9 +14,9 @@ module butterfly_type3 #(
     output logic signed [DATA_WIDTH-1:0] imag_out0,
     output logic signed [DATA_WIDTH-1:0] real_out1,
     output logic signed [DATA_WIDTH-1:0] imag_out1
-); +
+); 
     localparam signed [DATA_WIDTH-1:0] SQRT2_HALF = 16'sd23170;
-
+    
     logic signed [DATA_WIDTH-1:0] sum, diff;
     logic signed [2*DATA_WIDTH-1:0] mult_sum, mult_diff;
 
@@ -31,6 +31,12 @@ module butterfly_type3 #(
     end
 
     logic signed [DATA_WIDTH-1:0] twiddle_mult_real, twiddle_mult_imag;
+
+    always_ff @(posedge clk) begin
+    if (enable) begin
+        // Do nothing, just here to preserve the port
+    end
+    end
 
     always_ff @(posedge clk) begin
         twiddle_mult_real <= (mult_sum + (1 << (DATA_WIDTH - 1))) >>> DATA_WIDTH;  
@@ -56,4 +62,5 @@ module butterfly_type3 #(
             end
         end
     endgenerate
+        assign enable = 1'b1;
 endmodule
