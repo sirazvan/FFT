@@ -1,7 +1,7 @@
-module FFT16 #(
+module FFT #(
   parameter int DATA_WIDTH = 16
-  parameter int N = 16;
-  parameter int NUM_STAGES = $clog2(N);  
+  //parameter int N = 16,
+  //parameter int NUM_STAGES = $clog2(N)
 )(
   input  logic clk,
   input  logic rst_n,
@@ -22,9 +22,9 @@ module FFT16 #(
   logic signed [DATA_WIDTH-1:0] stage0_r[0:15];
   logic signed [DATA_WIDTH-1:0] stage0_i[0:15];
 
-  localparam INVERT_MODE = 0;
-  localparam TWIDDLE_IMAG = ;
-  localparam TWIDDLE_REAL = ;
+  localparam INVERT_MODE = 1'b0;
+  localparam TWIDDLE_IMAG = 0;
+  localparam TWIDDLE_REAL = 0;
   genvar i;
 
   //////////////////////////////////////////////////////////
@@ -49,139 +49,144 @@ module FFT16 #(
   endgenerate
 
 //////////////////////////////////////////////////////////
-  // === Stage 3 to 2 ===
-  // 4 -> butterfly type 1
+// === Stage 3 to 2 ===
+// 4 x butterfly type 1 -> z2(1:8)
 
-  generate
-    for (i = 0; i < 4; i = i + 1) begin : stage3_2_type1
-      butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
-        .clk(clk),
-        .enable(enable),
-        .rst_n(rst_n),
-        .real_in0(stage3_r[i]), 
-        .imag_in0(stage3_i[i]),
-        .real_in1(stage3_r[i+4]), 
-        .imag_in1(stage3_i[i+4]),
-        .real_out0(stage2_r[i]), 
-        .imag_out0(stage2_i[i]),
-        .real_out1(stage2_r[i+4]), 
-        .imag_out1(stage2_i[i+4])
-      );
-    end
-  endgenerate
+generate
+  for (i = 0; i < 4; i = i + 1) begin : stage3_2_type1
+    butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
+      .clk(clk),
+      .enable(enable),
+      .rst_n(rst_n),
+      .real_in0(stage3_r[i]), 
+      .imag_in0(stage3_i[i]),
+      .real_in1(stage3_r[i+4]), 
+      .imag_in1(stage3_i[i+4]),
+      .real_out0(stage2_r[i]),         // z2(1:4)
+      .imag_out0(stage2_i[i]),
+      .real_out1(stage2_r[i+4]),       // z2(5:8)
+      .imag_out1(stage2_i[i+4])
+    );
+  end
+endgenerate
 
-  // 4 -> butterfly type 2
+// 4 x butterfly type 2 -> z2(9:16)
 
-  generate
-    for (i = 4; i < 8; i = i + 1) begin : stage3_2_type2
-      butterfly_type2 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
-        .clk(clk),
-        .enable(enable),
-        .rst_n(rst_n),
-        .real_in0(stage3_r[i]), 
-        .imag_in0(stage3_i[i]),
-        .real_in1(stage3_r[i+4]), 
-        .imag_in1(stage3_i[i+4]),
-        .real_out0(stage2_r[i]), 
-        .imag_out0(stage2_i[i]),
-        .real_out1(stage2_r[i+4]), 
-        .imag_out1(stage2_i[i+4])
-      );
-    end
-  endgenerate
-//////////////////////////////////////////////////////////
+generate
+  for (i = 0; i < 4; i = i + 1) begin : stage3_2_type2
+    butterfly_type2 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
+      .clk(clk),
+      .enable(enable),
+      .rst_n(rst_n),
+      .real_in0(stage3_r[i+8]), 
+      .imag_in0(stage3_i[i+8]),
+      .real_in1(stage3_r[i+12]), 
+      .imag_in1(stage3_i[i+12]),
+      .real_out0(stage2_r[i+8]),       // z2(9:12)
+      .imag_out0(stage2_i[i+8]),
+      .real_out1(stage2_r[i+12]),      // z2(13:16)
+      .imag_out1(stage2_i[i+12])
+    );
+  end
+endgenerate
 
+// === Stage 2 to 1 ===
 
-  // === Stage 2 to 1 ===
-  // Custom mix of butterfly types
+// 2 x butterfly type 1 -> stage1_r[0:3]
+generate
+  for (i = 0; i < 2; i = i + 1) begin : stage2_1_type1
+    butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
+      .clk(clk),
+      .enable(enable),
+      .rst_n(rst_n),
 
-  // 2 -> butterfly type 1
-  generate
-    for (i = 0; i < 2; i = i + 1) begin : stage2_1_type1
-      butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
-        .clk(clk),
-        .enable(enable),
-        .rst_n(rst_n),
-        .real_in0(stage2_r[i]), 
-        .imag_in0(stage2_i[i]),
-        .real_in1(stage2_r[i+2]), 
-        .imag_in1(stage2_i[i+2]),
-        .real_out0(stage1_r[i]), 
-        .imag_out0(stage1_i[i]),
-        .real_out1(stage1_r[i+2]), 
-        .imag_out1(stage1_i[i+2])
-      );
-    end
-  endgenerate
+      .real_in0(stage2_r[i]),        // z2(1:2)
+      .imag_in0(stage2_i[i]),
+      .real_in1(stage2_r[i + 2]),    // z2(3:4)
+      .imag_in1(stage2_i[i + 2]),
 
-  // 2 -> butterfly type 2
-  generate
-    for (i = 2; i < 4; i = i + 1) begin : stage2_1_type2
-      butterfly_type2 #(.DATA_WIDTH(DATA_WIDTH)) 
-        bfly (
-        .clk(clk),
-        .enable(enable),
-        .rst_n(rst_n),
-        .real_in0(stage2_r[i]), 
-        .imag_in0(stage2_i[i]),
-        .real_in1(stage2_r[i+2]), 
-        .imag_in1(stage2_i[i+2]),
-        .real_out0(stage1_r[i]), 
-        .imag_out0(stage1_i[i]),
-        .real_out1(stage1_r[i+2]), 
-        .imag_out1(stage1_i[i+2])
-      );
-    end
-  endgenerate
-   
-  // 2 -> butterfly type 3_0
-  generate
-    for (i = 4; i < 6; i = i + 1) begin : stage2_1_type3
-      butterfly_type3 #(
-        .DATA_WIDTH(DATA_WIDTH),
-        .INVERT_MODE(INVERT_MODE)) 
-        bfly (
-        .clk(clk),
-        .en(enable),
-        .rst_n(rst_n),
-        .real_in0(stage2_r[i]), 
-        .imag_in0(stage2_i[i]),
-        .real_in1(stage2_r[i+2]), 
-        .imag_in1(stage2_i[i+2]),
-        .real_out0(stage1_r[i]), 
-        .imag_out0(stage1_i[i]),
-        .real_out1(stage1_r[i+2]), 
-        .imag_out1(stage1_i[i+2])
-      );
-   end
-   endgenerate
+      .real_out0(stage1_r[i]),       // z1(1:2)
+      .imag_out0(stage1_i[i]),
+      .real_out1(stage1_r[i + 2]),   // z1(3:4)
+      .imag_out1(stage1_i[i + 2])
+    );
+  end
+endgenerate
 
-   // 2 -> butterfly type 3_1
-  generate
-    for (i = 6; i < 8; i = i + 1) begin : stage2_1_type3_1
-      butterfly_type3 #(
-        .DATA_WIDTH(DATA_WIDTH),
-        .INVERT_MODE(!INVERT_MODE)) 
-        bfly (
-        .clk(clk),
-        .en(enable),
-        .rst_n(rst_n),
-        .real_in0(stage2_r[i]), 
-        .imag_in0(stage2_i[i]),
-        .real_in1(stage2_r[i+2]), 
-        .imag_in1(stage2_i[i+2]),
-        .real_out0(stage1_r[i]), 
-        .imag_out0(stage1_i[i]),
-        .real_out1(stage1_r[i+2]), 
-        .imag_out1(stage1_i[i+2])
-      );
-   end
-   endgenerate
+// 2 x butterfly type 2 -> stage1_r[4:7]
+generate
+  for (i = 0; i < 2; i = i + 1) begin : stage2_1_type2
+    butterfly_type2 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
+      .clk(clk),
+      .enable(enable),
+      .rst_n(rst_n),
 
+      .real_in0(stage2_r[i + 4]),    // z2(5:6)
+      .imag_in0(stage2_i[i + 4]),
+      .real_in1(stage2_r[i + 6]),    // z2(7:8)
+      .imag_in1(stage2_i[i + 6]),
 
-////////////////////////////////////////////////////////// === Stage 1 to 0 ===
+      .real_out0(stage1_r[i + 4]),   // z1(5:6)
+      .imag_out0(stage1_i[i + 4]),
+      .real_out1(stage1_r[i + 6]),   // z1(7:8)
+      .imag_out1(stage1_i[i + 6])
+    );
+  end
+endgenerate
 
-  // Index 0 → Butterfly Type 1
+// 2 x butterfly type 3 (INVERT_MODE = 0) -> stage1_r[8:11]
+generate
+  for (i = 0; i < 2; i = i + 1) begin : stage2_1_type3_0
+    butterfly_type3 #(
+      .DATA_WIDTH(DATA_WIDTH),
+      .INVERT_MODE(0)
+    ) bfly (
+      .clk(clk),
+      .enable(enable),
+      .rst_n(rst_n),
+
+      .real_in0(stage2_r[i + 8]),    // z2(9:10)
+      .imag_in0(stage2_i[i + 8]),
+      .real_in1(stage2_r[i + 10]),   // z2(11:12)
+      .imag_in1(stage2_i[i + 10]),
+
+      .real_out0(stage1_r[i + 8]),   // z1(9:10)
+      .imag_out0(stage1_i[i + 8]),
+      .real_out1(stage1_r[i + 10]),  // z1(11:12)
+      .imag_out1(stage1_i[i + 10])
+    );
+  end
+endgenerate
+
+// 2 x butterfly type 3 (INVERT_MODE = 1) -> stage1_r[12:15]
+generate
+  for (i = 0; i < 2; i = i + 1) begin : stage2_1_type3_1
+    butterfly_type3 #(
+      .DATA_WIDTH(DATA_WIDTH),
+      .INVERT_MODE(1)
+    ) bfly (
+      .clk(clk),
+      .enable(enable),
+      .rst_n(rst_n),
+
+      .real_in0(stage2_r[i + 12]),   // z2(13:14)
+      .imag_in0(stage2_i[i + 12]),
+      .real_in1(stage2_r[i + 14]),   // z2(15:16)
+      .imag_in1(stage2_i[i + 14]),
+
+      .real_out0(stage1_r[i + 12]),  // z1(13:14)
+      .imag_out0(stage1_i[i + 12]),
+      .real_out1(stage1_r[i + 14]),  // z1(15:16)
+      .imag_out1(stage1_i[i + 14])
+    );
+  end
+endgenerate
+  
+
+////////////////////////////////////////////////////////// 
+/////////////////=== Stage 1 to 0 ===/////////////////////
+
+  // Index 0 Butterfly Type 1
   butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH)) bfly_stage1_0 (
     .clk(clk),
     .enable(enable),
@@ -196,7 +201,7 @@ module FFT16 #(
     .imag_out1(stage0_i[1])
   );
 
-  // Index 1 → Butterfly Type 2
+  // Index 1 Butterfly Type 2
   butterfly_type2 #(.DATA_WIDTH(DATA_WIDTH)) bfly_stage1_1 (
     .clk(clk),
     .enable(enable),
@@ -211,13 +216,13 @@ module FFT16 #(
     .imag_out1(stage0_i[3])
   );
 
-  // Index 2 → Butterfly Type 3 (INVERT_MODE = 0)
+  // Index 2  Butterfly Type 3 (INVERT_MODE = 0)
   butterfly_type3 #(
     .DATA_WIDTH(DATA_WIDTH),
     .INVERT_MODE(INVERT_MODE)
   ) bfly_stage1_2 (
     .clk(clk),
-    .en(enable),
+    .enable(enable),
     .rst_n(rst_n),
     .real_in0(stage1_r[4]), 
     .imag_in0(stage1_i[4]),
@@ -229,13 +234,13 @@ module FFT16 #(
     .imag_out1(stage0_i[5])
   );
 
-  // Index 4 → Butterfly Type 3 (INVERT_MODE = 1)
+  // Index 4 Butterfly Type 3 (INVERT_MODE = 1)
   butterfly_type3 #(
     .DATA_WIDTH(DATA_WIDTH),
     .INVERT_MODE(!INVERT_MODE)
   ) bfly_stage1_4 (
     .clk(clk),
-    .en(enable),
+    .enable(enable),
     .rst_n(rst_n),
     .real_in0(stage1_r[6]), 
     .imag_in0(stage1_i[6]),
@@ -253,7 +258,7 @@ module FFT16 #(
     .TWIDDLE_IMAG(TWIDDLE_IMAG)    // +s
   ) bfly_8_9 (
     .clk(clk),
-    .en(enable),
+    .enable(enable),
     .rst_n(rst_n),
     .real_in0(stage1_r[8]), 
     .imag_in0(stage1_i[8]),
@@ -271,7 +276,7 @@ module FFT16 #(
     .TWIDDLE_IMAG(TWIDDLE_REAL)    // +c
   ) bfly_10_11 (
     .clk(clk),
-    .en(enable),
+    .enable(enable),
     .rst_n(rst_n),
     .real_in0(stage1_r[10]), 
     .imag_in0(stage1_i[10]),
@@ -289,7 +294,7 @@ module FFT16 #(
     .TWIDDLE_IMAG(TWIDDLE_REAL)    // +c
   ) bfly_12_13 (
     .clk(clk),
-    .en(enable),
+    .enable(enable),
     .rst_n(rst_n),
     .real_in0(stage1_r[12]), 
     .imag_in0(stage1_i[12]),
@@ -307,7 +312,7 @@ module FFT16 #(
     .TWIDDLE_IMAG(TWIDDLE_IMAG)    // +s
   ) bfly_14_15 (
     .clk(clk),
-    .en(enable),
+    .enable(enable),
     .rst_n(rst_n),
     .real_in0(stage1_r[14]), 
     .imag_in0(stage1_i[14]),
@@ -318,5 +323,11 @@ module FFT16 #(
     .real_out1(stage0_r[15]), 
     .imag_out1(stage0_i[15])
   );
-
+  // === Assign final output ===
+generate
+  for (i = 0; i < 16; i = i + 1) begin : output_assign
+    assign Zr[i] = stage0_r[i];
+    assign Zi[i] = stage0_i[i];
+  end
+endgenerate
 endmodule
