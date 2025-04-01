@@ -4,6 +4,7 @@ module butterfly_type1 #(
     input  logic clk, 
     input  logic enable,
     input  logic rst_n, 
+    
     input  logic signed [DATA_WIDTH-1:0] real_in0, 
     input  logic signed [DATA_WIDTH-1:0] imag_in0,
     input  logic signed [DATA_WIDTH-1:0] real_in1, 
