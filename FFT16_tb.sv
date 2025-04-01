@@ -1,18 +1,19 @@
-module FFT16_tb();
+
+module FFT16_tb;
 
   parameter DATA_WIDTH = 16;
+  parameter N = 16;
 
   logic clk;
   logic rst_n;
   logic enable;
 
-  logic signed [DATA_WIDTH-1:0] zr[0:15];
-  logic signed [DATA_WIDTH-1:0] zi[0:15];
+  logic signed [DATA_WIDTH-1:0] zr[0:N-1];
+  logic signed [DATA_WIDTH-1:0] zi[0:N-1];
+  logic signed [DATA_WIDTH-1:0] Zr[0:N-1];
+  logic signed [DATA_WIDTH-1:0] Zi[0:N-1];
 
-  logic signed [DATA_WIDTH-1:0] Zr[0:15];
-  logic signed [DATA_WIDTH-1:0] Zi[0:15];
-
-  FFT16 #(.DATA_WIDTH(DATA_WIDTH)) dut (
+  FFT #(.DATA_WIDTH(DATA_WIDTH)) dut (
     .clk(clk),
     .rst_n(rst_n),
     .enable(enable),
@@ -33,19 +34,15 @@ module FFT16_tb();
     rst_n = 1;
     enable = 1;
 
-    // Impulse signal input (fixed-point Q15)
-    zr[0] = 16'sh7FFF;  // 1.0 in Q15
-    zi[0] = 16'sh0000;
-    for (int i = 1; i < 16; i++) begin
-      zr[i] = 16'sh0000;
-      zi[i] = 16'sh0000;
+    for (int i = 0; i < N; i++) begin
+      zr[i] = 16'sh7FFF;  // Q15 = 1.0
+      zi[i] = 16'sh7FFF;  // Q15 = 1.0
     end
 
-    #200;  // Wait for FFT completion
+    #200;
 
-    // Display FFT outputs
-    $display("FFT Output:");
-    for (int i = 0; i < 16; i++) begin
+    $display("=== FFT Output: input = constant 1 + j1 ===");
+    for (int i = 0; i < N; i++) begin
       $display("Index %0d: Zr = %d, Zi = %d", i, Zr[i], Zi[i]);
     end
 
