@@ -1,7 +1,6 @@
-module FFT #(
-  parameter int DATA_WIDTH = 16
-  //parameter int N = 16,
-  //parameter int NUM_STAGES = $clog2(N)
+module FFT#(
+  parameter int DATA_WIDTH = 16,
+  parameter int VIRTUAL_DATA_WIDTH = 18,
 )(
   input  logic clk,
   input  logic rst_n,
@@ -22,9 +21,17 @@ module FFT #(
   logic signed [DATA_WIDTH-1:0] stage0_r[0:15];
   logic signed [DATA_WIDTH-1:0] stage0_i[0:15];
 
+  //Intermitent stages 
+  logic signed [VIRTUAL_DATA_WIDTH-1:0] scaled_stage2_r[0:15];
+  logic signed [VIRTUAL_DATA_WIDTH-1:0] scaled_stage2_i[0:15];
+  logic signed [VIRTUAL_DATA_WIDTH-1:0] scaled_stage0_r[0:15];
+  logic signed [VIRTUAL_DATA_WIDTH-1:0] scaled_stage0_i[0:15];
+
+  // Paramteres
+  localparam SHIFT_PARAM = 15;
   localparam INVERT_MODE = 1'b0;
-  localparam TWIDDLE_IMAG = 0;
-  localparam TWIDDLE_REAL = 0;
+  localparam signed [VIRTUAL_DATA_WIDTH-1:0] TWIDDLE_IMAG = signed'(30274);
+  localparam signed [VIRTUAL_DATA_WIDTH-1:0] TWIDDLE_REAL = signed'(12540);
   genvar i;
 
   //////////////////////////////////////////////////////////
@@ -32,7 +39,9 @@ module FFT #(
   // 8 -> butterfly type 1
   generate
     for (i = 0; i < 8; i = i + 1) begin : stage4_3
-      butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
+      butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH), 
+      .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH)) 
+      bfly8x1 (
         .clk(clk),
         .enable(enable),
         .rst_n(rst_n),
@@ -54,7 +63,9 @@ module FFT #(
 
 generate
   for (i = 0; i < 4; i = i + 1) begin : stage3_2_type1
-    butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
+    butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH), 
+    .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH))
+      bfly (
       .clk(clk),
       .enable(enable),
       .rst_n(rst_n),
@@ -74,7 +85,9 @@ endgenerate
 
 generate
   for (i = 0; i < 4; i = i + 1) begin : stage3_2_type2
-    butterfly_type2 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
+    butterfly_type2 #(.DATA_WIDTH(DATA_WIDTH),
+    .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH))
+    bfly (
       .clk(clk),
       .enable(enable),
       .rst_n(rst_n),
@@ -90,12 +103,25 @@ generate
   end
 endgenerate
 
+
+// Intermediate scaling
+
+generate
+  for (i = 0; i < 16; i++) begin : scale_down_stage2
+    assign scaled_stage2_r[i] = stage2_r[i] >>> 2;  
+    assign scaled_stage2_i[i] = stage2_i[i] >>> 2;
+  end
+endgenerate
+// END 
+
 // === Stage 2 to 1 ===
 
 // 2 x butterfly type 1 -> stage1_r[0:3]
 generate
   for (i = 0; i < 2; i = i + 1) begin : stage2_1_type1
-    butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
+    butterfly_type1 #(.DATA_WIDTH(DATA_WIDTH), 
+    .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH)) 
+    bfly (
       .clk(clk),
       .enable(enable),
       .rst_n(rst_n),
@@ -116,7 +142,9 @@ endgenerate
 // 2 x butterfly type 2 -> stage1_r[4:7]
 generate
   for (i = 0; i < 2; i = i + 1) begin : stage2_1_type2
-    butterfly_type2 #(.DATA_WIDTH(DATA_WIDTH)) bfly (
+    butterfly_type2 #(.DATA_WIDTH(DATA_WIDTH),
+    .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH)) 
+    bfly (
       .clk(clk),
       .enable(enable),
       .rst_n(rst_n),
@@ -135,10 +163,13 @@ generate
 endgenerate
 
 // 2 x butterfly type 3 (INVERT_MODE = 0) -> stage1_r[8:11]
+
 generate
   for (i = 0; i < 2; i = i + 1) begin : stage2_1_type3_0
     butterfly_type3 #(
       .DATA_WIDTH(DATA_WIDTH),
+      .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH),
+      .SHIFT_PARAM(SHIFT_PARAM),
       .INVERT_MODE(0)
     ) bfly (
       .clk(clk),
@@ -163,6 +194,8 @@ generate
   for (i = 0; i < 2; i = i + 1) begin : stage2_1_type3_1
     butterfly_type3 #(
       .DATA_WIDTH(DATA_WIDTH),
+      .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH),
+      .SHIFT_PARAM(SHIFT_PARAM),
       .INVERT_MODE(1)
     ) bfly (
       .clk(clk),
@@ -182,7 +215,6 @@ generate
   end
 endgenerate
   
-
 ////////////////////////////////////////////////////////// 
 /////////////////=== Stage 1 to 0 ===/////////////////////
 
@@ -219,6 +251,8 @@ endgenerate
   // Index 2  Butterfly Type 3 (INVERT_MODE = 0)
   butterfly_type3 #(
     .DATA_WIDTH(DATA_WIDTH),
+    .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH),
+    .SHIFT_PARAM(SHIFT_PARAM),
     .INVERT_MODE(INVERT_MODE)
   ) bfly_stage1_2 (
     .clk(clk),
@@ -237,6 +271,8 @@ endgenerate
   // Index 4 Butterfly Type 3 (INVERT_MODE = 1)
   butterfly_type3 #(
     .DATA_WIDTH(DATA_WIDTH),
+    .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH),
+    .SHIFT_PARAM(SHIFT_PARAM),
     .INVERT_MODE(!INVERT_MODE)
   ) bfly_stage1_4 (
     .clk(clk),
@@ -254,6 +290,8 @@ endgenerate
 
   butterfly_type4 #(
     .DATA_WIDTH(DATA_WIDTH),
+    .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH),
+    .SHIFT_PARAM(SHIFT_PARAM),
     .TWIDDLE_REAL(-1*TWIDDLE_REAL),  // -c
     .TWIDDLE_IMAG(TWIDDLE_IMAG)    // +s
   ) bfly_8_9 (
@@ -272,6 +310,8 @@ endgenerate
 
   butterfly_type4 #(
     .DATA_WIDTH(DATA_WIDTH),
+    .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH),
+    .SHIFT_PARAM(SHIFT_PARAM),
     .TWIDDLE_REAL(TWIDDLE_IMAG),   // +s
     .TWIDDLE_IMAG(TWIDDLE_REAL)    // +c
   ) bfly_10_11 (
@@ -290,6 +330,8 @@ endgenerate
 
   butterfly_type4 #(
     .DATA_WIDTH(DATA_WIDTH),
+    .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH),
+    .SHIFT_PARAM(SHIFT_PARAM),
     .TWIDDLE_REAL(-1*TWIDDLE_IMAG),  // -s
     .TWIDDLE_IMAG(TWIDDLE_REAL)    // +c
   ) bfly_12_13 (
@@ -308,6 +350,8 @@ endgenerate
 
   butterfly_type4 #(
     .DATA_WIDTH(DATA_WIDTH),
+    .VIRTUAL_DATA_WIDTH(VIRTUAL_DATA_WIDTH),
+    .SHIFT_PARAM(SHIFT_PARAM),
     .TWIDDLE_REAL(TWIDDLE_REAL),   // +c
     .TWIDDLE_IMAG(TWIDDLE_IMAG)    // +s
   ) bfly_14_15 (
@@ -323,7 +367,14 @@ endgenerate
     .real_out1(stage0_r[15]), 
     .imag_out1(stage0_i[15])
   );
-  // === Assign final output ===
+
+  generate
+  for (i = 0; i < 16; i++) begin : scale_output_stage
+    assign scaled_stage0_r[i] = stage0_r[i] >>> 2;  
+    assign scaled_stage0_i[i] = stage0_i[i] >>> 2;
+  end
+  endgenerate
+  
 generate
   for (i = 0; i < 16; i = i + 1) begin : output_assign
     assign Zr[i] = stage0_r[i];
